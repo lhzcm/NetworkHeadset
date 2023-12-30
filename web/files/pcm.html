@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="pcm.js"></script>
+</head>
+<body>
+    <div>播放时间：<span id="time">00:00:00</span></div>
+    <button id="play_btn" type="button">播放</button>
+    <script type="text/javascript">
+    var play = false;
+    var player = null;
+
+    const reader = new FileReader();
+    reader.addEventListener("loadend", () => {
+        var data = new Uint8Array(reader.result);
+        player.feed(data);
+    });
+
+    window.onload = function () {
+        if ("WebSocket" in window) {
+            // 打开一个 web socket
+            let url = `ws://${location.host}/ws`;
+            var ws = new WebSocket(url);
+
+            ws.onopen = function () {
+                // Web Socket 已连接上，使用 send() 方法发送数据
+                ////ws.send("发送数据");
+
+               /* ("Web Socket 已连接上");*/
+            };
+            ws.onmessage = function (evt) {
+                if (play && player){
+                    reader.readAsArrayBuffer(evt.data);
+                }
+                //接收到数据播放音频（event为接收到的pcm数据）
+                //alert("数据已接收...");
+            };
+
+            ws.onclose = function () {
+                // 关闭 websocket
+                alert("连接已关闭...");
+            };
+        }else {
+            // 浏览器不支持 WebSocket
+            alert("您的浏览器不支持 WebSocket!");
+        }
+
+        $("#play_btn").on("click", () => {
+            play = !play;
+            if (play) {
+                //创建实例
+                if (!player) {
+                    player = new PCMPlayer({
+                        encoding: "32bitInt",
+                        channels: 2,
+                        sampleRate: 48000,
+                        flushingTime: 200
+                    });
+                }
+                $("#play_btn").html("停止");
+            } else {
+                $("#play_btn").html("播放");
+            }
+        })
+
+        setInterval(() => {
+            if (play && player) {
+                let hour = parseInt(player.startTime / 3600);
+                let minute = parseInt((player.startTime - hour * 3600) / 60);
+                let second = parseInt(player.startTime - hour * 3600 - minute * 60);
+                $("#time").html(`${hour.toFixed(0).padStart(2, "0")}:${minute.toFixed(0).padStart(2, "0")}:${second.toFixed(0).padStart(2, "0")}`);
+            }
+        }, 1000);
+    }
+    </script>
+    </body>
+</html>
